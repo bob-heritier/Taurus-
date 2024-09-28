@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taurus</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Constellation Animation -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="taurus-animation">
+            <div class="rotating-rhombus"></div>
+            <h1>TAURUS</h1>
+        </div>
+    </div>
+
+    <!-- Home Page -->
+    <div id="home-page" class="home-page hidden">
+        <header>
+            <div id="logo" class="logo">
+                <div class="logo-frame">TAURUS</div>
+            </div>
+            <div id="user-profile">
+                <div id="profile-circle"></div>
+                <span id="sign-in">SIGN IN</span>
+                <div id="dropdown-menu" class="dropdown-menu">
+                    <!-- Dropdown for Sign In / Sign Up -->
+                </div>
+            </div>
+        </header>
+
+        <div id="search-section">
+            <input type="text" id="search-box" placeholder="Search for books or authors...">
+            <button id="write-button">Write</button>
+        </div>
+
+        <div id="intro">
+            <h2>WELCOME HOME TAURUS</h2>
+            <h3>TAURUS SPECIES</h3>
+        </div>
+
+        <div id="genres">
+            <ul>
+                <li>ROMANCE</li>
+                <li>SCI-FI</li>
+                <li>SPIRITUAL</li>
+                <!-- Add other genres as listed -->
+            </ul>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: url('taurus-constellation.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+
+.taurus-animation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: white;
+}
+
+.rotating-rhombus {
+    width: 100px;
+    height: 100px;
+    border: 2px solid white;
+    transform: rotate(45deg);
+    animation: rotate 5s infinite linear;
+}
+
+@keyframes rotate {
+    from { transform: rotate(45deg); }
+    to { transform: rotate(405deg); }
+}
+
+.home-page {
+    display: none;
+    background: white;
+}
+
+.hidden {
+    display: none;
+}
+document.addEventListener('DOMContentLoaded', function () {
+    // Animation and screen change after 5 seconds
+    setTimeout(() => {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('home-page').style.display = 'block';
+    }, 7000); // 5 seconds + 2 seconds fade out
+});
+const mongoose = require('mongoose');
+
+const UserSchema = new mongoose.Schema({
+    username: String,
+    email: String,
+    password: String,
+    profilePic: String,
+});
+
+const BookSchema = new mongoose.Schema({
+    title: String,
+    description: String,
+    genre: String,
+    author: mongoose.Schema.Types.ObjectId,
+    chapters: [{
+        title: String,
+        content: String,
+    }],
+    status: String,
+});
+
+const User = mongoose.model('User', UserSchema);
+const Book = mongoose.model('Book', BookSchema);
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'yourEmail@gmail.com',
+        pass: 'yourPassword'
+    }
+});
+
+const mailOptions = {
+    from: 'yourEmail@gmail.com',
+    to: 'bobheritier50@gmail.com',
+    subject: 'New Signup',
+    text: 'A user with <email> has created an account on Taurus.'
+};
+
+transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+        console.error('Error sending email:', error);
+    } else {
+        console.log('Email sent:', info.response);
+    }
+});
+/client
+  /src
+    /components
+    /pages
+    /services
+/server
+  /controllers
+  /models
+  /routes
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import HomePage from './pages/HomePage';
+import GenrePage from './pages/GenrePage';
+import BookDetailsPage from './pages/BookDetailsPage';
+import ReadingPage from './pages/ReadingPage';
+import SearchPage from './pages/SearchPage';
+import WritePage from './pages/WritePage';
+import MyStoriesPage from './pages/MyStoriesPage';
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/genre/:genreId" element={<GenrePage />} />
+        <Route path="/book/:bookId" element={<BookDetailsPage />} />
+        <Route path="/read/:bookId/:chapterId" element={<ReadingPage />} />
+        <Route path="/search" element={<SearchPage />} />
+        <Route path="/write" element={<WritePage />} />
+        <Route path="/mystories" element={<MyStoriesPage />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const User = require('../models/userModel');
+
+exports.register = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, email, password: hashedPassword });
+    await newUser.save();
+    
+    // Send notification email here
+    // Send welcome email to user here
+
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
+    res.status(201).json({ token, user: { username, email } });
+  } catch (error) {
+    res.status(400).json({ message: 'Error registering user' });
+  }
+};
+
+exports.login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return res.status(400).json({ message: 'Invalid credentials' });
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    res.json({ token, user: { username, email: user.email } });
+  } catch (error) {
+    res.status(400).json({ message: 'Error logging in' });
+  }
+};
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api/auth/';
+
+export const register = async (username, email, password) => {
+  const response = await axios.post(`${API_URL}register`, { username, email, password });
+  localStorage.setItem('user', JSON.stringify(response.data));
+  return response.data;
+};
+
+export const login = async (username, password) => {
+  const response = await axios.post(`${API_URL}login`, { username, password });
+  localStorage.setItem('user', JSON.stringify(response.data));
+  return response.data;
+};
+
+export const logout = () => {
+  localStorage.removeItem('user');
+};
+const io = require('socket.io')(server);
+
+io.on('connection', (socket) => {
+  console.log('New client connected');
+
+  socket.on('comment', (data) => {
+    io.emit('comment', data); // Broadcast the comment to all connected clients
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+import React, { useState, useEffect } from 'react';
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:5000');
+
+function CommentSection({ bookId, chapterId }) {
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+
+  useEffect(() => {
+    socket.on('comment', (comment) => {
+      setComments((prevComments) => [...prevComments, comment]);
+    });
+
+    return () => socket.off('comment');
+  }, []);
+
+  const handleCommentSubmit = () => {
+    socket.emit('comment', { bookId, chapterId, text: newComment });
+    setNewComment('');
+  };
+
+  return (
+    <div>
+      <h3>Comments</h3>
+      {comments.map((comment, index) => (
+        <p key={index}>{comment.text}</p>
+      ))}
+      <input 
+        type="text" 
+        value={newComment} 
+        onChange={(e) => setNewComment(e.target.value)} 
+        placeholder="Add a comment..." 
+      />
+      <button onClick={handleCommentSubmit}>Submit</button>
+    </div>
+  );
+}
+
+export default CommentSection;
+npm install express mongoose bcrypt jsonwebtoken dotenv multer socket.io
+/server
+  /controllers
+  /models
+  /routes
+  server.js
+  .env
+const express = require('express');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const http = require('http');
+const { Server } = require('socket.io');
+const authRoutes = require('./routes/authRoutes');
+
+dotenv.config();
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000", // Adjust for frontend origin
+    methods: ["GET", "POST"]
+  }
+});
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.log(err));
+
+app.use(express.json());
+
+// Routes
+app.use('/api/auth', authRoutes);
+
+io.on('connection', (socket) => {
+  console.log('New client connected');
+  socket.on('comment', (data) => {
+    io.emit('comment', data);
+  });
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const mongoose = require('mongoose');
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }
+});
+
+module.exports = mongoose.model('User', userSchema);
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const User = require('../models/userModel');
+
+exports.register = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, email, password: hashedPassword });
+    await newUser.save();
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
+    res.status(201).json({ token, user: { username, email } });
+  } catch (error) {
+    res.status(400).json({ message: 'Error registering user' });
+  }
+};
+
+exports.login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return res.status(400).json({ message: 'Invalid credentials' });
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    res.json({ token, user: { username, email: user.email } });
+  } catch (error) {
+    res.status(400).json({ message: 'Error logging in' });
+  }
+};
+const express = require('express');
+const { register, login } = require('../controllers/authController');
+const router = express.Router();
+
+router.post('/register', register);
+router.post('/login', login);
+
+module.exports = router;
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: './uploads',
+  filename: (req, file, cb) => {
+    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage });
+
+const router = express.Router();
+
+router.post('/cover', upload.single('cover'), (req, res) => {
+  res.send({ filePath: `/uploads/${req.file.filename}` });
+});
+
+module.exports = router;
+git init
+git add .
+git commit -m "Initial commit"
+heroku create
+git push heroku main
+heroku config:set MONGO_URI="your_mongo_uri"
+heroku config:set JWT_SECRET="your_jwt_secret"
+npx create-react-app client
+cd client
+npm install axios react-router-dom react-hook-form socket.io-client
+import axios from 'axios';
+
+const API_URL = 'https://your-heroku-app.herokuapp.com/api/auth/';
+
+export const register = async (username, email, password) => {
+  const response = await axios.post(`${API_URL}register`, { username, email, password });
+  localStorage.setItem('user', JSON.stringify(response.data));
+  return response.data;
+};
+
+export const login = async (username, password) => {
+  const response = await axios.post(`${API_URL}login`, { username, password });
+  localStorage.setItem('user', JSON.stringify(response.data));
+  return response.data;
+};
+
+export const logout = () => {
+  localStorage.removeItem('user');
+};
+import { useForm } from 'react-hook-form';
+import { register } from '../services/authService';
+
+function RegisterPage() {
+  const { register, handleSubmit, formState: { errors } } = useForm();
+
+  const onSubmit = async (data) => {
+    try {
+      await register(data.username, data.email, data.password);
+      alert('User registered successfully!');
+    } catch (error) {
+      console.error('Error registering user', error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('username', { required: true })} placeholder="Username" />
+      {errors.username && <p>Username is required</p>}
+      
+      <input {...register('email', { required: true })} placeholder="Email" />
+      {errors.email && <p>Email is required</p>}
+      
+      <input {...register('password', { required: true })} placeholder="Password" type="password" />
+      {errors.password && <p>Password is required</p>}
+      
+      <button type="submit">Register</button>
+    </form>
+  );
+}
+
+export default RegisterPage;
+import React, { useState, useEffect } from 'react';
+import io from 'socket.io-client';
+
+const socket = io('https://your-heroku-app.herokuapp.com');
+
+function CommentSection({ bookId, chapterId }) {
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+
+  useEffect(() => {
+    socket.on('comment', (comment) => {
+      setComments((prevComments) => [...prevComments, comment]);
+    });
+
+    return () => socket.off('comment');
+  }, []);
+
+  const handleCommentSubmit = () => {
+    socket.emit('comment', { bookId, chapterId, text: newComment });
+    setNewComment('');
+  };
+
+  return (
+    <div>
+      <h3>Comments</h3>
+      {comments.map((comment, index) => (
+        <p key={index}>{comment.text}</p>
+      ))}
+      <input
+        value={newComment}
+        onChange={(e) => setNewComment(e.target.value)}
+        placeholder="Add a comment"
+      />
+      <button onClick={handleCommentSubmit}>Send</button>
+    </div>
+  );
+}
+
+export default CommentSection;
+npm run build
+npm install -g vercel
+vercel
+MONGO_URI=your_mongo_atlas_uri
+JWT_SECRET=your_jwt_secret
+- Ensure you do not commit the `.env` file to version control by adding `.env` to your `.gitignore`.
+
+REACT_APP_API_BASE_URL=https://your-backend-heroku-app.herokuapp.com
+- Make sure these variables are prefixed with `REACT_APP_` to be accessible in the React app.
+npm install express mongoose bcrypt jsonwebtoken dotenv multer socket.io cors
+/server
+  /controllers
+  /models
+  /routes
+  /uploads
+  server.js
+  .env
+  .gitignore
+const express = require('express');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const http = require('http');
+const cors = require('cors');
+const { Server } = require('socket.io');
+const authRoutes = require('./routes/authRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+
+dotenv.config();
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.log(err));
+
+app.use(cors());
+app.use(express.json());
+app.use('/uploads', express.static('uploads'));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Socket.IO
+io.on('connection', (socket) => {
+  console.log('New client connected');
+  socket.on('comment', (data) => {
+    io.emit('comment', data);
+  });
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const mongoose = require('mongoose');
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }
+});
+module.exports = mongoose.model('User', userSchema);
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const User = require('../models/userModel');
+
+exports.register = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, email, password: hashedPassword });
+    await newUser.save();
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
+    res.status(201).json({ token, user: { username, email } });
+  } catch (error) {
+    res.status(400).json({ message: 'Error registering user' });
+  }
+};
+
+exports.login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return res.status(400).json({ message: 'Invalid credentials' });
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    res.json({ token, user: { username, email: user.email } });
+  } catch (error) {
+    res.status(400).json({ message: 'Error logging in' });
+  }
+};
+const express = require('express');
+const { register, login } = require('../controllers/authController');
+const router = express.Router();
+
+router.post('/register', register);
+router.post('/login', login);
+
+module.exports = router;
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: './uploads',
+  filename: (req, file, cb) => {
+    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage });
+const router = express.Router();
+
+router.post('/cover', upload.single('cover'), (req, res) => {
+  res.send({ filePath: `/uploads/${req.file.filename}` });
+});
+
+module.exports = router;
+npm install axios react-router-dom react-hook-form socket.io-client
+/client
+  /src
+    /components
+    /pages
+    App.js
+    index.js
+  .env
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import RegisterPage from './pages/RegisterPage';
+import LoginPage from './pages/LoginPage';
+import HomePage from './pages/HomePage';
+import CommentSection from './components/CommentSection';
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/book/:bookId/chapter/:chapterId/comments" element={<CommentSection />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
+import { useForm } from 'react-hook-form';
+import { register as registerUser } from '../services/authService';
+
+function RegisterPage() {
+  const { register, handleSubmit, formState: { errors } } = useForm();
+
+  const onSubmit = async (data) => {
+    try {
+      await registerUser(data.username, data.email, data.password);
+      alert('User registered successfully!');
+    } catch (error) {
+      console.error('Error registering user', error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('username', { required: true })} placeholder="Username" />
+      {errors.username && <p>Username is required</p>}
+/server
+  /controllers
+    - authController.js
+  /models
+    - userModel.js
+  /routes
+    - authRoutes.js
+    - uploadRoutes.js
+  /uploads
+  server.js
+  .env
+  .gitignore
+const express = require('express');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const http = require('http');
+const cors = require('cors');
+const { Server } = require('socket.io');
+const authRoutes = require('./routes/authRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+
+dotenv.config();
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.log(err));
+
+app.use(cors());
+app.use(express.json());
+app.use('/uploads', express.static('uploads'));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Socket.IO
+io.on('connection', (socket) => {
+  console.log('New client connected');
+  socket.on('comment', (data) => {
+    io.emit('comment', data);
+  });
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const User = require('../models/userModel');
+
+exports.register = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, email, password: hashedPassword });
+    await newUser.save();
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
+    res.status(201).json({ token, user: { username, email } });
+  } catch (error) {
+    res.status(400).json({ message: 'Error registering user' });
+  }
+};
+
+exports.login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return res.status(400).json({ message: 'Invalid credentials' });
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    res.json({ token, user: { username, email: user.email } });
+  } catch (error) {
+    res.status(400).json({ message: 'Error logging in' });
+  }
+};
+const mongoose = require('mongoose');
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }
+});
+module.exports = mongoose.model('User', userSchema);
+const express = require('express');
+const { register, login } = require('../controllers/authController');
+const router = express.Router();
+
+router.post('/register', register);
+router.post('/login', login);
+
+module.exports = router;
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: './uploads',
+  filename: (req, file, cb) => {
+    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage });
+const router = express.Router();
+
+router.post('/cover', upload.single('cover'), (req, res) => {
+  res.send({ filePath: `/uploads/${req.file.filename}` });
+});
+
+module.exports = router;
+MONGO_URI=your_mongo_atlas_uri
+JWT_SECRET=your_jwt_secret
+/client
+  /src
+    /components
+      - CommentSection.js
+    /pages
+      - RegisterPage.js
+      - LoginPage.js
+      - HomePage.js
+    App.js
+    index.js
+  .env
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import RegisterPage from './pages/RegisterPage';
+import LoginPage from './pages/LoginPage';
+import HomePage from './pages/HomePage';
+import CommentSection from './components/CommentSection';
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/book/:bookId/chapter/:chapterId/comments" element={<CommentSection />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
+import { useForm } from 'react-hook-form';
+import { register as registerUser } from '../services/authService';
+
+function RegisterPage() {
+  const { register, handleSubmit, formState: { errors } } = useForm();
+
+  const onSubmit = async (data) => {
+    try {
+      await registerUser(data.username, data.email, data.password);
+      alert('User registered successfully!');
+    } catch (error) {
+      console.error('Error registering user', error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('username', { required: true })} placeholder="Username" />
+      {errors.username && <p>Username is required</p>}
+     
+npm install express mongoose dotenv cors bcrypt jsonwebtoken multer socket.io
+npx create-react-app client
+npm install axios react-hook-form socket.io-client react-router-dom
+import { io } from 'socket.io-client';
+const socket = io('http://localhost:5000');
+cd server
+node server.js
+cd client
+npm start
+web: node server.js
